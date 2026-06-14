@@ -1,0 +1,75 @@
+<?php
+require_once __DIR__ . '/../Models/Formation.php';
+
+class FormationDAOImpl {
+    private PDO $pdo;
+
+    public function __construct(PDO $pdo) {
+        $this->pdo = $pdo;
+    }
+
+    public function getAll(): array {
+        $sql = "SELECT f.*,
+                       c.cours_name,
+                       fo.firstName AS formateur_firstName, fo.lastName AS formateur_lastName,
+                       v.ville_name,
+                       fd.date
+                FROM Formation f
+                LEFT JOIN Cours c ON f.cours_id = c.id
+                LEFT JOIN Formateur fo ON f.formateur_id = fo.id
+                LEFT JOIN Ville v ON f.ville_id = v.id
+                LEFT JOIN FormationDate fd ON f.formation_date_id = fd.id
+                ORDER BY fd.date DESC";
+
+        $stmt = $this->pdo->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    public function getById(int $id): ?Formation {
+        $stmt = $this->pdo->prepare("SELECT * FROM Formation WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            return new Formation(
+                $row['id'],
+                $row['price'],
+                $row['mode'],
+                $row['cours_id'],
+                $row['formateur_id'],
+                $row['formation_date_id'],
+                $row['ville_id']
+            );
+        }
+        return null;
+    }
+
+    public function create(Formation $formation): bool {
+        $stmt = $this->pdo->prepare("INSERT INTO Formation (price, mode, cours_id, formateur_id, formation_date_id, ville_id) VALUES (?, ?, ?, ?, ?, ?)");
+        return $stmt->execute([
+            $formation->price,
+            $formation->mode,
+            $formation->cours_id,
+            $formation->formateur_id,
+            $formation->formation_date_id,
+            $formation->ville_id
+        ]);
+    }
+
+    public function update(Formation $formation): bool {
+        $stmt = $this->pdo->prepare("UPDATE Formation SET price = ?, mode = ?, cours_id = ?, formateur_id = ?, formation_date_id = ?, ville_id = ? WHERE id = ?");
+        return $stmt->execute([
+            $formation->price,
+            $formation->mode,
+            $formation->cours_id,
+            $formation->formateur_id,
+            $formation->formation_date_id,
+            $formation->ville_id,
+            $formation->id
+        ]);
+    }
+
+    public function delete(int $id): bool {
+        $stmt = $this->pdo->prepare("DELETE FROM Formation WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+}
